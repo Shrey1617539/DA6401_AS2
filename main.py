@@ -2,6 +2,7 @@ import argparse
 import torch.utils
 import torch.utils.data
 import wandb  
+import helping_functions
 from helping_functions import Dataset, CNN_model
 import numpy as np
 import torch
@@ -20,8 +21,39 @@ def main(args):
     train_loader = torch.utils.data.DataLoader(train_subset, batch_size=32, shuffle=True)
     val_loader = torch.utils.data.DataLoader(val_subset, batch_size=32, shuffle=False)
     
+    model = CNN_model(
+        input_size=args.input_size,
+        output_size = 10,
+        num_filters = [32, 64, 128, 256, 512],
+        kernel_sizes = [3,3,3,3,3],
+        pool_kernels = [2,2,2,2,2],
+        paddings = [1,1,1,1,1],
+        conv_strides = [1,1,1,1,1],
+        dense_layer = 1000,
+        activation_fn = 'relu',
+        use_softmax = False
+    )
 
-    dataset_test = Dataset(data_dir=args.dataset_test, input_size=args.input_size, data_augmentation=get_config_value(wandb.config, args, 'data_augmentation'))
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cpu")
+    print(f"Using device: {device}")
+    model.to(device)
+
+    model = helping_functions.train_CNN_model(
+        model=model,
+        train_loader=train_loader,
+        learning_rate=0.001,
+        epochs = 3,
+        device=device
+    )
+
+    accuracy = helping_functions.test_CNN_model(
+        model=model,
+        test_loader=val_loader,
+        device=device
+    )
+
+    # dataset_test = Dataset(data_dir=args.dataset_test, input_size=args.input_size, data_augmentation=get_config_value(wandb.config, args, 'data_augmentation'))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
