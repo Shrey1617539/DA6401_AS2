@@ -1,8 +1,9 @@
-import torch 
+import torch
+import torchvision 
 
 class CNN_model(torch.nn.Module):
     def __init__(self, input_size, output_size, num_filters, size_filters, pool_kernels, paddings, conv_strides, dense_layer, activation_fn, use_softmax=False):
-        super().__init__()
+        super(CNN_model, self).__init__()
 
         self.conv_blocks = torch.nn.ModuleList()
 
@@ -25,32 +26,20 @@ class CNN_model(torch.nn.Module):
                 return (a,a)
 
         for i in range(len(num_filters)):
-            if i == 0:
-                block = torch.nn.Sequential(
-                    torch.nn.Conv2d(
-                        in_channels=3, 
-                        out_channels=make_tuple(num_filters[i]), 
-                        kernel_size=make_tuple(size_filters[i]), 
-                        padding=make_tuple(paddings[i]), 
-                        stride=make_tuple(conv_strides[i])
-                    ),
-                    identify_aactivation(activation_fn),
-                    torch.nn.MaxPool2d(kernel_size=make_tuple(pool_kernels[i]), stride=make_tuple(pool_kernels[i]))
-                )
-            else:
-                block = torch.nn.Sequential(
-                    torch.nn.Conv2d(
-                        in_channels=make_tuple(num_filters[i-1]), 
-                        out_channels=make_tuple(num_filters[i]), 
-                        kernel_size=make_tuple(size_filters[i]), 
-                        padding=make_tuple(paddings[i]), 
-                        stride=make_tuple(conv_strides[i])
-                    ),
-                    identify_aactivation(activation_fn),
-                    torch.nn.MaxPool2d(kernel_size=make_tuple(pool_kernels[i]), stride=make_tuple(pool_kernels[i]))
-                )
+        
+            block = torch.nn.Sequential(
+                torch.nn.Conv2d(
+                    in_channels=3 if i == 0 else num_filters[i-1], 
+                    out_channels=num_filters[i], 
+                    kernel_size=make_tuple(size_filters[i]), 
+                    padding=make_tuple(paddings[i]), 
+                    stride=make_tuple(conv_strides[i])
+                ),
+                identify_aactivation(activation_fn),
+                torch.nn.MaxPool2d(kernel_size=make_tuple(pool_kernels[i]), stride=make_tuple(pool_kernels[i]))
+            )
             self.conv_blocks.append(block)
-
+        
         h, w = make_tuple(input_size)
         for i in range(len(num_filters)):
             f_h, f_w = make_tuple(size_filters[i])
@@ -65,7 +54,7 @@ class CNN_model(torch.nn.Module):
 
             h = ((h - pp_h)//ps_h) + 1
             w = ((w - pp_w)//ps_w) + 1
-
+        
         self.dense_layer = torch.nn.Sequential(
             torch.nn.Flatten(),
             torch.nn.Linear(in_features=num_filters[-1]*h*w, out_features=dense_layer),
@@ -73,6 +62,8 @@ class CNN_model(torch.nn.Module):
             torch.nn.Linear(in_features=dense_layer, out_features=output_size),
         )
         self.use_softmax = use_softmax
+        if use_softmax:
+            self.softmax_layer = torch.nn.Softmax(dim=1)
     
     def forward(self, x):
         for block in self.conv_blocks:
@@ -81,9 +72,28 @@ class CNN_model(torch.nn.Module):
         x = self.dense_layer(x)
 
         if self.use_softmax:
-            x = torch.nn.functional.softmax(x, dim=1)
+            x = self.softmax_layer(x)
         
         return x
 
+class Dataset(torch.utils.data.Dataset):
+    def __init__(self, data_dir, input_size=(224,224), data_augmentation=False):
+        transform = torchvision.transforms.Compose([
+            torchvision.transforms.Resize(input_size),
+            torchvision.transforms.RandomHorizontalFlip() if data_augmentation else torchvision.transforms.Lambda(lambda x: x),
+            torchvision.transforms.RandomRotation(20) if data_augmentation else torchvision.transforms.Lambda(lambda x: x),
+            torchvision.transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1) if data_augmentation else torchvision.transforms.Lambda(lambda x: x),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(mean=[0.4716, 0.4602, 0.3899], std=[0.2382, 0.2273, 0.2361])
+        ])
+        self.data = torchvision.datasets.ImageFolder(root=data_dir, transform=transform)
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, index):
+        return self.data[index]
 
+    def get_classes(self):
+        return self.data.classes
     
