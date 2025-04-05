@@ -96,4 +96,35 @@ class Dataset(torch.utils.data.Dataset):
 
     def get_classes(self):
         return self.data.classes
-    
+
+    def stratified_split(self, val_ratio=0.2, seed=42):
+        # Create a dictionary to map each class to its sample indices
+        class_to_indices = {}
+        for idx, (_, label) in enumerate(self.data.samples):
+            if label not in class_to_indices:
+                class_to_indices[label] = []
+            class_to_indices[label].append(idx)
+        
+        # Split indices for each class
+        train_indices = []
+        val_indices = []
+        
+        generator = torch.Generator().manual_seed(seed)
+        
+        for cls in class_to_indices:
+            indices = class_to_indices[cls]
+            n = len(indices)
+            n_val = int(n * val_ratio)
+            
+            # Shuffle indices for this class
+            permuted_indices = torch.randperm(n, generator=generator).tolist()
+            
+            # Assign training and validation indices
+            val_indices.extend([indices[i] for i in permuted_indices[:n_val]])
+            train_indices.extend([indices[i] for i in permuted_indices[n_val:]])
+        
+        # Create Subsets
+        train_subset = torch.utils.data.Subset(self.data, train_indices)
+        val_subset = torch.utils.data.Subset(self.data, val_indices)
+        
+        return train_subset, val_subset
