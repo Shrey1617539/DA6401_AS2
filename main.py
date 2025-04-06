@@ -47,7 +47,8 @@ def main(args):
         val_loader=val_loader,
         learning_rate = get_config_value(wandb.config, args, 'learning_rate'),
         epochs = get_config_value(wandb.config, args, 'epochs'),
-        device=device
+        device=device,
+        patience=get_config_value(wandb.config, args, 'patience')
     )
 
     # dataset_test = Dataset(data_dir=args.dataset_test, input_size=args.input_size, data_augmentation=get_config_value(wandb.config, args, 'data_augmentation'))
@@ -186,6 +187,13 @@ if __name__ == "__main__":
         type=float,
         default=0.01,
         help='Learning rate for the optimizer'
+    )
+    parser.add_argument(
+        '-pa',
+        '--patience',
+        type=int,
+        default=3,
+        help='Patience for early stopping'
     )
     # Use parse_known_args to ignore extra arguments injected by wandb sweep agent
     args = parser.parse_args()

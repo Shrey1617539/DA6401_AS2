@@ -174,12 +174,15 @@ def test_CNN_model(model, test_loader, device, test_logging = True):
     
     return accuracy, test_loss / len(test_loader)
 
-def train_CNN_model(model, train_loader, val_loader, learning_rate, epochs, device):
+def train_CNN_model(model, train_loader, val_loader, learning_rate, epochs, device, patience = 3):
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-    for epoch in range(epochs):
+    best_val_loss = float('inf')
+    best_model_state = None
+    patience_counter = 0
 
+    for epoch in range(epochs):
         model.train()
         running_loss = 0.0
         correct = 0
@@ -212,5 +215,17 @@ def train_CNN_model(model, train_loader, val_loader, learning_rate, epochs, devi
             "validation_loss": val_loss,
             "epoch": epoch+1
         })
+
+        if val_loss < best_val_loss - 1e-3:
+            best_val_loss = val_loss
+            patience_counter = 0
+            best_model_state = model.state_dict().copy()
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                break
+    
+    if best_model_state is not None:
+        model.load_state_dict(best_model_state)
 
     return model
