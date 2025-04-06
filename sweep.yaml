@@ -1,0 +1,54 @@
+method: bayes
+command: ["python", "main.py"]
+metric:
+  goal: maximize
+  name: validation_accuracy
+parameters:
+  data_augmentation:
+    values: [true, false]
+
+  batch_size:
+    values: [8, 16, 32, 64]
+
+  number_of_filters:
+    values:
+      - [32, 64, 128, 256, 512]
+      - [16, 32, 64, 128, 256]
+      - [64, 128, 256, 512, 1024]
+
+  kernel_sizes:
+    values:
+      - [3, 3, 3, 3, 3]
+      - [5, 5, 3, 3, 3]
+
+  pool_kernels:
+    values:
+      - [2, 2, 2, 2, 2]
+
+  paddings:
+    values:
+      - [1, 1, 1, 1, 1]
+
+  conv_strides:
+    values:
+      - [1, 1, 1, 1, 1]
+
+  dense_layer:
+    values: [512, 1024, 2048]
+
+  activation_fn:
+    values: ["relu", "leaky_relu", "selu"]
+
+  use_softmax:
+    values: [0, 1]
+
+  batch_norm:
+    values: [0, 1]
+
+  epochs:
+    value: 10
+
+  learning_rate:
+    distribution: log_uniform_values
+    min: 0.0001
+    max: 0.1

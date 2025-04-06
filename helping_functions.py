@@ -1,9 +1,15 @@
 import torch
 import torchvision 
-from tqdm import tqdm
+import wandb
 
 class CNN_model(torch.nn.Module):
-    def __init__(self, input_size, output_size, num_filters, kernel_sizes, pool_kernels, paddings, conv_strides, dense_layer, activation_fn, use_softmax=False, batch_norm=True):
+    def __init__(
+            self, input_size, output_size, 
+            num_filters, kernel_sizes, pool_kernels, 
+            paddings, conv_strides, dense_layer, 
+            activation_fn, use_softmax=False, batch_norm=True
+        ):
+        
         super(CNN_model, self).__init__()
 
         self.conv_blocks = torch.nn.ModuleList()
@@ -139,7 +145,36 @@ class Dataset(torch.utils.data.Dataset):
         
         return train_subset, val_subset
     
-def train_CNN_model(model, train_loader, learning_rate, epochs, device):
+def test_CNN_model(model, test_loader, device, test_logging = True):
+    model.eval()
+    criterion = torch.nn.CrossEntropyLoss()
+    test_loss = 0.0
+    correct = 0
+    total = 0
+
+    with torch.no_grad():
+        for images, labels in test_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+            
+            test_loss += loss.item()
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    accuracy = 100 * correct / total
+    if test_logging:
+        wandb.log({
+            "test_accuracy": accuracy, 
+            "test_loss": test_loss / len(test_loader) 
+        })
+    
+    return accuracy, test_loss / len(test_loader)
+
+def train_CNN_model(model, train_loader, val_loader, learning_rate, epochs, device):
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -147,10 +182,10 @@ def train_CNN_model(model, train_loader, learning_rate, epochs, device):
 
         model.train()
         running_loss = 0.0
+        correct = 0
+        total = 0
 
-        progress_bar = tqdm(train_loader, desc=f"Epoch [{epoch+1}/{epochs}]", leave=False)
-
-        for images, labels in progress_bar:
+        for images, labels in train_loader:
             images = images.to(device)
             labels = labels.to(device)
 
@@ -162,41 +197,20 @@ def train_CNN_model(model, train_loader, learning_rate, epochs, device):
             optimizer.step()
 
             running_loss += loss.item()
-            
-            # Update progress bar with current batch loss
-            progress_bar.set_postfix(loss=f"{loss.item():.4f}")
 
-        # for batch_idx, (images, labels) in enumerate(train_loader):
-        #     images = images.to(device)
-        #     labels = labels.to(device)
-
-        #     scores = model(images)
-        #     loss = criterion(scores, labels)
-
-        #     optimizer.zero_grad()
-        #     loss.backward()
-        #     optimizer.step()
-
-        #     running_loss += loss.item()
-
-    print(f"Loss: {running_loss/len(train_loader):.4f}")
-    return model
-
-def test_CNN_model(model, test_loader, device):
-    model.eval()
-    correct = 0
-    total = 0
-
-    with torch.no_grad():
-        for images, labels in test_loader:
-            images = images.to(device)
-            labels = labels.to(device)
-
-            outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
-
+            _, predicted = torch.max(scores.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
+        
+        train_accuracy = 100 * correct / total
+        val_accuracy, val_loss = test_CNN_model(model, val_loader, device, test_logging=False)
+        
+        wandb.log({
+            "train_loss": running_loss / len(train_loader),
+            "train_accuracy": train_accuracy,
+            "validation_accuracy":val_accuracy,
+            "validation_loss": val_loss,
+            "epoch": epoch+1
+        })
 
-    print(f"Accuracy: {100 * correct / total:.2f}%")
-    return 100 * correct / total
+    return model
