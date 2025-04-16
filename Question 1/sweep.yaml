@@ -26,6 +26,7 @@ parameters:
   pool_kernels:
     values:
       - [2, 2, 2, 2, 2]
+      - [3, 3, 2, 2, 2]
 
   paddings:
     values:
@@ -36,7 +37,7 @@ parameters:
       - [1, 1, 1, 1, 1]
 
   dense_layer:
-    values: [64, 128, 256, 512, 1024]
+    values: [256, 512, 1024]
 
   activation_fn:
     values: ["relu", "tanh", "selu", "gelu", "mish", "leakyrelu"]

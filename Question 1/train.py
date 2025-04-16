@@ -63,8 +63,19 @@ def main(args):
         patience=get_config_value(wandb.config, args, 'patience')
     )
     
-    # dataset_test = Dataset(data_dir=args.dataset_test, input_size=args.input_size, data_augmentation=get_config_value(wandb.config, args, 'data_augmentation'))
+    # This class is used to load the dataset and apply data augmentation if required
+    dataset_test = Dataset(data_dir=args.dataset_test, input_size=args.input_size, data_augmentation=get_config_value(wandb.config, args, 'data_augmentation'))
 
+    # This function is used to create the data loaders for train and validation set
+    test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=get_config_value(wandb.config, args, 'batch_size'), shuffle=False)
+    
+    # This function is used to test the model with the given parameters
+    test_accuracy, test_loss = helping_functions.test_CNN_model(
+        model=model,
+        test_loader=test_loader,
+        device=device
+    )
+    
 if __name__ == "__main__":
 
     # Argument parser to take command line arguments

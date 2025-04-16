@@ -31,7 +31,7 @@ class CNN_model(torch.nn.Module):
         num_features = self.model.fc.in_features
         self.model.fc = torch.nn.Linear(num_features, num_classes)
 
-
+    # Forward pass through the model
     def forward(self, x):
         return self.model(x)
 
