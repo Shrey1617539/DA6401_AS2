@@ -15,14 +15,14 @@ parser.add_argument(
     '-we',
     '--wandb_entity',
     type=str,
-    default='me21b138-indian-institute-of-technology-madras',
+    default=None,
     help='Wandb Entity used to track experiments in the Weights & Biases dashboard'
 )
 parser.add_argument(
     '-wp',
     '--wandb_project',
     type=str,
-    default='AS2',
+    default=None,
     help='Project name used to track experiments in Weights & Biases dashboard'
 )
 parser.add_argument(

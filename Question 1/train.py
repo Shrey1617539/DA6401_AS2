@@ -68,13 +68,30 @@ def main(args):
 
     # This function is used to create the data loaders for train and validation set
     test_loader = torch.utils.data.DataLoader(dataset_test, batch_size=get_config_value(wandb.config, args, 'batch_size'), shuffle=False)
+
+    if args.evaluate_training == True:
+        train_accuracy, train_loss = helping_functions.test_CNN_model(
+            model=model,
+            data_loader=train_loader,
+            device=device
+        )
+        print(f"Train Accuracy: {train_accuracy}, Train Loss: {train_loss}")
     
-    # This function is used to test the model with the given parameters
-    test_accuracy, test_loss = helping_functions.test_CNN_model(
-        model=model,
-        test_loader=test_loader,
-        device=device
-    )
+    if args.evaluate_validation == True:
+        val_accuracy, val_loss = helping_functions.test_CNN_model(
+            model=model,
+            data_loader=val_loader,
+            device=device
+        )
+        print(f"Validation Accuracy: {val_accuracy}, Validation Loss: {val_loss}")
+    
+    if args.evaluate_test == True:
+        test_accuracy, test_loss = helping_functions.test_CNN_model(
+            model=model,
+            data_loader=test_loader,
+            device=device
+        )
+        print(f"Test Accuracy: {test_accuracy}, Test Loss: {test_loss}")
     
 if __name__ == "__main__":
 
@@ -86,28 +103,28 @@ if __name__ == "__main__":
         '-we',
         '--wandb_entity',
         type=str,
-        default='me21b138-indian-institute-of-technology-madras',
+        default=None,
         help='Wandb Entity used to track experiments in the Weights & Biases dashboard'
     )
     parser.add_argument(
         '-wp',
         '--wandb_project',
         type=str,
-        default='AS2',
+        default=None,
         help='Project name used to track experiments in Weights & Biases dashboard'
     )
     parser.add_argument(
         '-d',
         '--dataset_train',
         type=str,
-        default="C:/Users/shrey/Desktop/ACAD/DL/nature_12K/inaturalist_12K/train",
+        default="path/to/training/data",
         help='give the train directory location of your dataset'
     )
     parser.add_argument(
         '-d_test',
         '--dataset_test',
         type=str,
-        default="C:/Users/shrey/Desktop/ACAD/DL/nature_12K/inaturalist_12K/val",
+        default="path/to/test/data",
         help='give the test directory location of your dataset'
     )
     parser.add_argument(
@@ -136,7 +153,7 @@ if __name__ == "__main__":
         '--number_of_filters',
         nargs="*",
         type=int,
-        default=[16, 32, 64, 128, 256],
+        default=[64, 128, 256, 512, 1024],
         help='Number of filters for each convolutional layer'
     )
     parser.add_argument(
@@ -144,7 +161,7 @@ if __name__ == "__main__":
         '--kernel_sizes',
         nargs="*",
         type=int,
-        default=[3, 3, 3, 3, 3],
+        default=[3, 3, 3, 5, 5],
         help='Kernel sizes for each convolutional layer'
     )
     parser.add_argument(
@@ -152,7 +169,7 @@ if __name__ == "__main__":
         '--pool_kernels',
         nargs="*",
         type=int,
-        default=[2, 2, 2, 2, 2],
+        default=[3, 3, 2, 2, 2],
         help='Pooling kernels for each convolutional layer'
     )
     parser.add_argument(
@@ -175,21 +192,21 @@ if __name__ == "__main__":
         '-dl',
         '--dense_layer',
         type=int,
-        default=512,
+        default=256,
         help='Number of neurons in the dense layer'
     )
     parser.add_argument(
         '-af',
         '--activation_fn',
         type=str,
-        default='relu',
+        default='gelu',
         help='Activation function to be used in the model'
     )
     parser.add_argument(
         '-us',
         '--use_softmax',
         type=bool,
-        default=0,
+        default=1,
         help='Use of softmax layer in the model'
     )
     parser.add_argument(
@@ -210,22 +227,43 @@ if __name__ == "__main__":
         '-lr',
         '--learning_rate',
         type=float,
-        default=0.01,
+        default=0.0001329901471283676,
         help='Learning rate for the optimizer'
     )
     parser.add_argument(
         '-pa',
         '--patience',
         type=int,
-        default=3,
+        default=5,
         help='Patience for early stopping'
     )
     parser.add_argument(
         '-dr',
         '--dropout_rate',
         type=float,
-        default=0.3,
+        default=0.025831017228233916,
         help='Dropout rate for model'
+    )
+    parser.add_argument(
+        '-etr',
+        '--evaluate_training',
+        type=bool,
+        default=False,
+        help='If you want to see evaluation on training data, set True.'
+    )
+    parser.add_argument(
+        '-eva',
+        '--evaluate_validation',
+        type=bool,
+        default=False,
+        help='If you want to see evaluation on validation data, set True.'
+    )
+    parser.add_argument(
+        '-ete',
+        '--evaluate_test',
+        type=bool,
+        default=False,
+        help='If you want to see evaluation on test data, set True.'
     )
 
     args = parser.parse_args()
