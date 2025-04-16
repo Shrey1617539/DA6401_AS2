@@ -11,7 +11,7 @@ class CNN_model(torch.nn.Module):
     """
     def __init__(self, num_classes=10, trainable_layers=1):
         super(CNN_model, self).__init__()
-        self.model = models.resnet50(pretrained=True)
+        self.model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
         
         # Freeze all layers
         for param in self.model.parameters():

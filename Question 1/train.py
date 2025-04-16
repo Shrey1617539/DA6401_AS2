@@ -72,7 +72,7 @@ def main(args):
     if args.evaluate_training == True:
         train_accuracy, train_loss = helping_functions.test_CNN_model(
             model=model,
-            data_loader=train_loader,
+            test_loader=train_loader,
             device=device
         )
         print(f"Train Accuracy: {train_accuracy}, Train Loss: {train_loss}")
@@ -80,7 +80,7 @@ def main(args):
     if args.evaluate_validation == True:
         val_accuracy, val_loss = helping_functions.test_CNN_model(
             model=model,
-            data_loader=val_loader,
+            test_loader=val_loader,
             device=device
         )
         print(f"Validation Accuracy: {val_accuracy}, Validation Loss: {val_loss}")
@@ -88,7 +88,7 @@ def main(args):
     if args.evaluate_test == True:
         test_accuracy, test_loss = helping_functions.test_CNN_model(
             model=model,
-            data_loader=test_loader,
+            test_loader=test_loader,
             device=device
         )
         print(f"Test Accuracy: {test_accuracy}, Test Loss: {test_loss}")
