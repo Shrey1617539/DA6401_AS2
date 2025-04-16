@@ -1,19 +1,28 @@
 import torch
 import torchvision 
 import wandb
+from tqdm import tqdm
 
 class CNN_model(torch.nn.Module):
+    """
+    A Convolutional Neural Network (CNN) model for image classification.
+    This model consists of several convolutional blocks followed by a fully connected layer.
+    The architecture is flexible and can be customized with different parameters.
+    """
     def __init__(
             self, input_size, output_size, 
             num_filters, kernel_sizes, pool_kernels, 
             paddings, conv_strides, dense_layer, 
-            activation_fn, use_softmax=False, batch_norm=True
+            activation_fn, use_softmax=False, 
+            batch_norm=True, dropout_rate=0.0
         ):
         
         super(CNN_model, self).__init__()
 
         self.conv_blocks = torch.nn.ModuleList()
+        self.dropout_rate = dropout_rate
 
+        # This function is used to identify the activation function based on the name provided
         def identify_activation(function_name):
             activation = {
                 'relu': torch.nn.ReLU(),
@@ -26,6 +35,7 @@ class CNN_model(torch.nn.Module):
             }
             return activation.get(function_name.lower(), torch.nn.ReLU())
         
+        # This function is used to convert the input into a tuple if it is not already a tuple
         def make_tuple(a):
             if isinstance(a, tuple):
                 return a
@@ -33,7 +43,7 @@ class CNN_model(torch.nn.Module):
                 return (a,a)
 
         for i in range(len(num_filters)):
-        
+            # Create a convolutional block with the specified parameters
             block = torch.nn.Sequential(
                 torch.nn.Conv2d(
                     in_channels=3 if i == 0 else num_filters[i-1], 
@@ -44,10 +54,12 @@ class CNN_model(torch.nn.Module):
                 ),
                 torch.nn.BatchNorm2d(num_filters[i]) if batch_norm else torch.nn.Identity(),
                 identify_activation(activation_fn),
+                torch.nn.Dropout2d(p=dropout_rate) if dropout_rate>0 else torch.nn.Identity(),
                 torch.nn.MaxPool2d(kernel_size=make_tuple(pool_kernels[i]), stride=make_tuple(pool_kernels[i]))
             )
             self.conv_blocks.append(block)
         
+        # Calculate the output size after all convolutional and pooling layers
         h, w = make_tuple(input_size)
         for i in range(len(num_filters)):
             f_h, f_w = make_tuple(kernel_sizes[i])
@@ -63,17 +75,21 @@ class CNN_model(torch.nn.Module):
             h = ((h - pp_h)//ps_h) + 1
             w = ((w - pp_w)//ps_w) + 1
         
+        # Create the fully connected layer with the specified parameters
         self.dense_layer = torch.nn.Sequential(
             torch.nn.Flatten(),
-            torch.nn.Linear(in_features=num_filters[-1]*h*w, out_features=dense_layer),
+            torch.nn.Linear(in_features=num_filters[-1]*h*w, out_features=dense_layer, bias=True),
             torch.nn.BatchNorm1d(dense_layer) if batch_norm else torch.nn.Identity(),
             identify_activation(activation_fn),
+            torch.nn.Dropout(p=dropout_rate) if dropout_rate>0 else torch.nn.Identity(),
             torch.nn.Linear(in_features=dense_layer, out_features=output_size),
         )
+        # Set the activation function for the output layer
         self.use_softmax = use_softmax
         if use_softmax:
             self.softmax_layer = torch.nn.Softmax(dim=1)
     
+    # Forward pass through the model
     def forward(self, x):
         for block in self.conv_blocks:
             x = block(x)
@@ -86,14 +102,21 @@ class CNN_model(torch.nn.Module):
         return x
 
 class Dataset(torch.utils.data.Dataset):
+    """
+    This class is used to load the dataset and apply data augmentation if required.
+    It uses the ImageFolder class from torchvision to load the images and their labels.
+    """
     def __init__(self, data_dir, input_size=(224,224), data_augmentation=False):
+
         super(Dataset, self).__init__()
+        # This function is used to convert the input into a tuple if it is not already a tuple
         def make_tuple(a):
             if isinstance(a, tuple):
                 return a
             else:
                 return (a,a)
             
+        # This function is used to apply data augmentation if required
         transform = torchvision.transforms.Compose([
             torchvision.transforms.Resize(make_tuple(input_size)),
             torchvision.transforms.RandomHorizontalFlip() if data_augmentation else torchvision.transforms.Lambda(lambda x: x),
@@ -146,13 +169,19 @@ class Dataset(torch.utils.data.Dataset):
         return train_subset, val_subset
     
 def test_CNN_model(model, test_loader, device, test_logging = True):
+    """
+    This function is used to test the model on the test set.
+    It calculates the accuracy and loss of the model on the test set.
+    """
     model.eval()
     criterion = torch.nn.CrossEntropyLoss()
     test_loss = 0.0
     correct = 0
     total = 0
 
+    # Disable gradient calculation for testing
     with torch.no_grad():
+        # Iterate through the test data
         for images, labels in test_loader:
             images = images.to(device)
             labels = labels.to(device)
@@ -160,12 +189,16 @@ def test_CNN_model(model, test_loader, device, test_logging = True):
             outputs = model(images)
             loss = criterion(outputs, labels)
             
+            # Accumulate loss and correct predictions
             test_loss += loss.item()
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
+    # Calculate accuracy
     accuracy = 100 * correct / total
+
+    # Log test results to wandb if required
     if test_logging:
         wandb.log({
             "test_accuracy": accuracy, 
@@ -175,6 +208,11 @@ def test_CNN_model(model, test_loader, device, test_logging = True):
     return accuracy, test_loss / len(test_loader)
 
 def train_CNN_model(model, train_loader, val_loader, learning_rate, epochs, device, patience = 3):
+    """
+    This function is used to train the model with the given parameters.
+    It uses the Adam optimizer and CrossEntropy loss function.
+    It also implements early stopping based on validation loss.
+    """
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -182,32 +220,39 @@ def train_CNN_model(model, train_loader, val_loader, learning_rate, epochs, devi
     best_model_state = None
     patience_counter = 0
 
+    # Training loop
     for epoch in range(epochs):
         model.train()
         running_loss = 0.0
         correct = 0
         total = 0
 
-        for images, labels in train_loader:
+        # Iterate through the training data
+        for images, labels in tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs}", leave=False):
             images = images.to(device)
             labels = labels.to(device)
 
             scores = model(images)
             loss = criterion(scores, labels)
 
+            # Backward pass and optimization
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
             running_loss += loss.item()
 
+            # Get the predicted class
             _, predicted = torch.max(scores.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
         
         train_accuracy = 100 * correct / total
+
+        # Validate the model on the validation set
         val_accuracy, val_loss = test_CNN_model(model, val_loader, device, test_logging=False)
         
+        # Log training and validation metrics to wandb
         wandb.log({
             "train_loss": running_loss / len(train_loader),
             "train_accuracy": train_accuracy,
@@ -216,6 +261,7 @@ def train_CNN_model(model, train_loader, val_loader, learning_rate, epochs, devi
             "epoch": epoch+1
         })
 
+        # Early stopping based on validation loss
         if val_loss < best_val_loss - 1e-3:
             best_val_loss = val_loss
             patience_counter = 0
@@ -225,6 +271,7 @@ def train_CNN_model(model, train_loader, val_loader, learning_rate, epochs, devi
             if patience_counter >= patience:
                 break
     
+    # Load the best model state if available
     if best_model_state is not None:
         model.load_state_dict(best_model_state)
 

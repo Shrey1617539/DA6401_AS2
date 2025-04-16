@@ -1,5 +1,5 @@
 method: bayes
-command: ["python", "main.py"]
+command: ["python", "train.py"]
 metric:
   goal: maximize
   name: validation_accuracy
@@ -7,19 +7,21 @@ parameters:
   data_augmentation:
     values: [true, false]
 
-  batch_size:
-    values: [8, 16, 32, 64]
-
   number_of_filters:
     values:
-      - [32, 64, 128, 256, 512]
+      - [256, 128, 64, 32, 16]
+      - [512, 256, 128, 64, 32]
+      - [32, 32, 32, 32, 32]
+      - [64, 64, 64, 64, 64]
       - [16, 32, 64, 128, 256]
+      - [32, 64, 128, 256, 512]
       - [64, 128, 256, 512, 1024]
 
   kernel_sizes:
     values:
       - [3, 3, 3, 3, 3]
       - [5, 5, 3, 3, 3]
+      - [5, 5, 5, 5, 5]
 
   pool_kernels:
     values:
@@ -34,10 +36,10 @@ parameters:
       - [1, 1, 1, 1, 1]
 
   dense_layer:
-    values: [512, 1024, 2048]
+    values: [64, 128, 256, 512, 1024]
 
   activation_fn:
-    values: ["relu", "leaky_relu", "selu"]
+    values: ["relu", "tanh", "selu", "gelu", "mish", "leakyrelu"]
 
   use_softmax:
     values: [0, 1]
@@ -45,8 +47,10 @@ parameters:
   batch_norm:
     values: [0, 1]
 
-  epochs:
-    value: 10
+  dropout_rate:
+    distribution: uniform
+    min: 0.0
+    max: 0.75
 
   learning_rate:
     distribution: log_uniform_values
