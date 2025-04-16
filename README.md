@@ -1,5 +1,11 @@
 # DA6401_AS2
 
+## Links
+
+Wandb report link: https://wandb.ai/me21b138-indian-institute-of-technology-madras/AS2/reports/ME21B138-s-DA6401-Assignment-2--VmlldzoxMjEwMDMxMg
+
+Github link: https://github.com/Shrey1617539/DA6401_AS2
+
 # DA6401 AS2 Q1
 
 This repository contains tools for training convolutional neural network models with extensive configuration options and automated hyperparameter optimization using Weights & Biases (wandb).
