@@ -165,7 +165,7 @@ This project provides a complete pipeline for image classification tasks with th
 Below is the repository’s file structure to help you navigate the project:
 
 ```
-Question 1/
+Question 2/
 ├── README.md # Project documentation and this file
 ├── train.py # Main training script
 ├── helping_functions.py # Helper functions (data loading, CNN model definition, etc.)
